@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e78">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ورق kg/mm">
+<title>محاسبه‌گر ورق فولادی (kg / mm)</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f6f8;--card:#fff;--text:#1b2733;--muted:#6b7a88;--line:#d5dce3;--accent:#1f4e78;--calc:#e3f4e6;--calcline:#2e8b57;--btn:#1f4e78;--btntext:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171e;--card:#1a242d;--text:#e8eef3;--muted:#92a3b2;--line:#33424f;--accent:#7fb3e0;--calc:#17361f;--calcline:#4cc27f;--btn:#3b7bb3;--btntext:#fff}}
+:root[data-theme="dark"]{--bg:#10171e;--card:#1a242d;--text:#e8eef3;--muted:#92a3b2;--line:#33424f;--accent:#7fb3e0;--calc:#17361f;--calcline:#4cc27f;--btn:#3b7bb3;--btntext:#fff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,Vazirmatn,Arial,sans-serif;padding:16px;max-width:520px;margin-inline:auto}
+h1{font-size:19px;margin:6px 0 4px;color:var(--accent)}
+p.sub{margin:0 0 16px;font-size:13px;color:var(--muted);line-height:1.7}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.row{display:flex;align-items:center;gap:8px}
+input{width:100%;font-size:22px;padding:12px;border:2px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);text-align:center;direction:ltr;font-family:Arial,sans-serif}
+input:focus{outline:none;border-color:var(--accent)}
+input.calc{background:var(--calc);border-color:var(--calcline)}
+.unit{min-width:46px;font-size:13px;color:var(--muted);direction:ltr}
+.tag{font-size:11px;color:var(--calcline);height:14px;margin-top:4px}
+#status{font-size:13px;color:var(--muted);text-align:center;min-height:20px;margin:4px 0 12px}
+button{width:100%;padding:13px;font-size:16px;border:0;border-radius:10px;background:var(--btn);color:var(--btntext);font-family:inherit}
+.dens input{font-size:17px;padding:8px}
+.note{font-size:12px;color:var(--muted);line-height:1.8;margin-top:12px}
+</style>
+</head>
+<body>
+<h1>محاسبه‌گر ورق فولادی <span style="font-size:13px;color:var(--muted)">(kg / mm)</span></h1>
+<p class="sub">چهار مقدار را وارد کنید؛ بقیه (وزن، عرض، ضخامت، طول، تعداد یا کل طول) خودکار محاسبه می‌شود. هر کدام را می‌توانید تغییر دهید، آن‌وقت قدیمی‌ترین ورودی به‌عنوان مجهول محاسبه می‌شود.</p>
+
+<div class="card" id="fields"></div>
+
+<div id="status">چهار مقدار را وارد کنید</div>
+<div id="unitw" style="font-size:14px;color:var(--accent);text-align:center;min-height:20px;margin-bottom:8px"></div>
+<button id="clear" type="button">پاک کردن همه</button>
+
+<div class="card dens" style="margin-top:12px">
+  <label for="rho">چگالی فولاد (kg/mm³)</label>
+  <input id="rho" inputmode="decimal" value="0.00000785">
+</div>
+<div class="note">فرمول: وزن کل (kg) = چگالی (kg/mm³) × عرض × ضخامت × طول هر شیت (mm) × تعداد شیت<br>کل طول = طول هر شیت × تعداد شیت<br>چگالی فولاد ۷٫۸۵ g/cm³ = ۰٫۰۰۰۰۰۷۸۵ kg/mm³<br>برای نصب روی گوشی: در منوی مرورگر «Add to Home Screen» را بزنید.</div>
+
+<script>
+var F=[
+ {k:'W',n:'وزن کل',u:'kg'},
+ {k:'w',n:'عرض',u:'mm'},
+ {k:'t',n:'ضخامت',u:'mm'},
+ {k:'L',n:'طول هر شیت',u:'mm'},
+ {k:'N',n:'تعداد شیت',u:'عدد'},
+ {k:'T',n:'کل طول',u:'mm'}
+];
+var NEED=4;
+var order=[];
+var el={};
+var box=document.getElementById('fields');
+F.forEach(function(f){
+  var d=document.createElement('div');d.style.marginBottom='12px';
+  d.innerHTML='<label for="i_'+f.k+'">'+f.n+'</label><div class="row"><input id="i_'+f.k+'" inputmode="decimal" autocomplete="off"><span class="unit">'+f.u+'</span></div><div class="tag" id="g_'+f.k+'"></div>';
+  box.appendChild(d);
+  el[f.k]=d.querySelector('input');
+  el[f.k].addEventListener('input',function(){onType(f.k)});
+});
+var rho=document.getElementById('rho');
+try{var s=localStorage.getItem('rho3');if(s)rho.value=s}catch(e){}
+rho.addEventListener('input',function(){try{localStorage.setItem('rho3',rho.value)}catch(e){}recalc()});
+
+function num(s){
+  s=String(s).replace(/[۰-۹]/g,function(c){return c.charCodeAt(0)-1776})
+             .replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-1632})
+             .replace(/[٫,،]/g,'.').trim();
+  var v=parseFloat(s);return isFinite(v)?v:NaN;
+}
+function fmt(x){return String(Number(x.toPrecision(6)))}
+function has(v,k){return v[k]!==undefined}
+function solve(v,r){
+  for(var i=0;i<4;i++){
+    var m=['W','w','t','T'].filter(function(k){return !has(v,k)});
+    if(m.length===1){var k=m[0];
+      if(k==='W')v.W=r*v.w*v.t*v.T;
+      else if(k==='w')v.w=v.W/(r*v.t*v.T);
+      else if(k==='t')v.t=v.W/(r*v.w*v.T);
+      else v.T=v.W/(r*v.w*v.t);}
+    var m2=['T','L','N'].filter(function(k){return !has(v,k)});
+    if(m2.length===1){var q=m2[0];
+      if(q==='T')v.T=v.L*v.N;
+      else if(q==='L')v.L=v.T/v.N;
+      else v.N=v.T/v.L;}
+  }
+  return v;
+}
+function mark(k,on){
+  el[k].classList.toggle('calc',on);el[k]._calc=on;
+  document.getElementById('g_'+k).textContent=on?'محاسبه‌شده':'';
+}
+function onType(k){
+  var v=num(el[k].value);
+  order=order.filter(function(x){return x!==k});
+  mark(k,false);
+  if(!isNaN(v)&&v>0) order.push(k);
+  if(order.length>NEED){order.shift()}
+  recalc();
+}
+function recalc(){
+  var r=num(rho.value);
+  var st=document.getElementById('status'), uw=document.getElementById('unitw');
+  uw.textContent='';
+  F.forEach(function(f){if(order.indexOf(f.k)<0){if(el[f.k]._calc)el[f.k].value='';mark(f.k,false)}});
+  if(!(r>0)){st.textContent='چگالی نامعتبر است';return}
+  if(order.length<NEED){st.textContent='چهار مقدار را وارد کنید';return}
+  var v={};order.forEach(function(k){v[k]=num(el[k].value)});
+  solve(v,r);
+  F.forEach(function(f){if(order.indexOf(f.k)<0&&has(v,f.k)){el[f.k].value=fmt(v[f.k]);mark(f.k,true)}});
+  var bad=F.filter(function(f){return !has(v,f.k)});
+  if(bad.length){
+    st.textContent=(order.indexOf('L')>=0&&order.indexOf('N')>=0&&order.indexOf('T')>=0)?'کل طول همان طول هر شیت × تعداد است؛ یکی از این سه را کنار بگذارید':'با این چهار مقدار نمی‌شود همه را محاسبه کرد؛ طول هر شیت یا تعداد را هم وارد کنید';
+    return;
+  }
+  st.textContent='';
+  if(v.w>0&&v.t>0&&v.L>0)uw.textContent='وزن هر شیت: '+fmt(r*v.w*v.t*v.L)+' kg';
+  if(order.indexOf('N')<0&&Math.abs(v.N-Math.round(v.N))>1e-6)uw.textContent+=(uw.textContent?' | ':'')+'تعداد تقریباً '+Math.round(v.N)+' شیت';
+}
+document.getElementById('clear').addEventListener('click',function(){
+  order=[];F.forEach(function(f){el[f.k].value='';mark(f.k,false)});
+  document.getElementById('status').textContent='چهار مقدار را وارد کنید';
+  document.getElementById('unitw').textContent='';
+});
+
+if('serviceWorker' in navigator){window.addEventListener('load',function(){try{navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}})}
+</script>
+</body>
+</html>
